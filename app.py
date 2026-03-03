@@ -29,9 +29,9 @@ with st.sidebar:
     </div>""", unsafe_allow_html=True)
 
     st.markdown('<div class="nav-section">NAVEGACIÓN</div>', unsafe_allow_html=True)
-    st.page_link("app.py",                                 label="🏠  Inicio")
-    st.page_link("pages/1_⚽_Mundial_2026.py",             label="⚽  Mundial 2026")
-    st.page_link("pages/2_📜_Estadísticas_Históricas.py",  label="📜  Historia")
+    st.page_link("app.py",                                label="🏠  Inicio")
+    st.page_link("pages/1_Mundial_2026.py",               label="⚽  Mundial 2026")
+    st.page_link("pages/2_Estadisticas_Historicas.py",    label="📜  Historia")
 
     st.markdown('<div class="nav-section" style="margin-top:1rem">EN VIVO</div>', unsafe_allow_html=True)
     live = [m for m in MATCHES if m["status"] == "LIVE"]
