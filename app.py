@@ -1,161 +1,271 @@
+"""
+app.py — Página principal (Home) de la app Mundial 2026.
+Ejecutar con:  streamlit run app.py
+"""
 import streamlit as st
-import pandas as pd
+from components.styles import CSS
+from data.mock_data import (
+    MATCHES, GROUPS, FLAG_MAP, NAME_MAP,
+    TOP_SCORERS, STANDINGS, get_group_standings,
+)
 
-# 1. CONFIGURACIÓN DE PÁGINA Y CSS
-st.set_page_config(page_title="Mundial 2026 Analytics", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(
+    page_title="Mundial 2026 · Home",
+    page_icon="🏆",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+st.markdown(CSS, unsafe_allow_html=True)
 
-# Inyectamos CSS para darle un diseño "Pro" (Tarjetas, avatares redondos, sombras)
+# ─────────────────────────────────────────────────────────
+# SIDEBAR
+# ─────────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("""
+    <div class="sidebar-logo">
+        <div style="font-size:3rem">🏆</div>
+        <div class="sidebar-logo-title">MUNDIAL<br>2026</div>
+        <div class="sidebar-logo-sub">USA · Canadá · México</div>
+    </div>""", unsafe_allow_html=True)
+
+    st.markdown('<div class="nav-section">NAVEGACIÓN</div>', unsafe_allow_html=True)
+    st.page_link("app.py",                                 label="🏠  Inicio")
+    st.page_link("pages/1_⚽_Mundial_2026.py",             label="⚽  Mundial 2026")
+    st.page_link("pages/2_📜_Estadísticas_Históricas.py",  label="📜  Historia")
+
+    st.markdown('<div class="nav-section" style="margin-top:1rem">EN VIVO</div>', unsafe_allow_html=True)
+    live = [m for m in MATCHES if m["status"] == "LIVE"]
+    if live:
+        for m in live:
+            hf = FLAG_MAP.get(m["home"], "🏳️")
+            af = FLAG_MAP.get(m["away"], "🏳️")
+            st.markdown(f"""
+            <div style="background:rgba(192,57,43,0.15);border:1px solid rgba(192,57,43,0.3);
+                        border-radius:10px;padding:0.6rem 0.8rem;margin-bottom:0.4rem">
+                <div style="font-size:0.65rem;letter-spacing:2px;color:#E74C3C;
+                            text-transform:uppercase;margin-bottom:3px">
+                    <span class="live-dot"></span> EN VIVO
+                </div>
+                <div style="font-family:'Oswald',sans-serif;font-size:0.9rem">
+                    {hf} {m['home_score']} – {m['away_score']} {af}
+                </div>
+            </div>""", unsafe_allow_html=True)
+    else:
+        st.markdown('<div style="color:var(--muted);font-size:0.8rem;padding:0.5rem 1rem">No hay partidos en vivo</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="nav-section" style="margin-top:1rem">INFO</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div style="color:var(--muted);font-size:0.72rem;padding:0 1rem;line-height:1.8">
+        📅 11 Jun – 19 Jul 2026<br>
+        🏟️ 16 estadios<br>
+        🌍 48 selecciones<br>
+        ⚽ 104 partidos<br>
+        <span style="opacity:0.5;font-size:0.65rem">Datos de ejemplo</span>
+    </div>""", unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────────────────
+# HERO
+# ─────────────────────────────────────────────────────────
 st.markdown("""
-    <style>
-    /* Estilo para las tarjetas de partidos */
-    .match-card {
-        background-color: #1e1e1e;
-        border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 10px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border: 1px solid #333;
-    }
-    .team-info {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 1.2rem;
-        font-weight: bold;
-    }
-    .score {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #ff4b4b;
-    }
-    /* Estilo para fotos de jugadores */
-    .player-avatar {
-        border-radius: 50%;
-        width: 60px;
-        height: 60px;
-        object-fit: cover;
-        border: 2px solid #ff4b4b;
-    }
-    /* Limpiar apariencia de tabs */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 20px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        border-radius: 5px 5px 0px 0px;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# 2. NAVEGACIÓN PRINCIPAL (Sidebar)
-st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/FIFA_World_Cup_2026_Logo.png/800px-FIFA_World_Cup_2026_Logo.png", width=200)
-st.sidebar.title("Navegación")
-menu_principal = st.sidebar.radio("Secciones", ["1. Mundial 2026", "2. Estadísticas Históricas"])
-
-# ==========================================
-# SECCIÓN 1: MUNDIAL 2026
-# ==========================================
-if menu_principal == "1. Mundial 2026":
-    st.title("🏆 Mundial 2026: Dashboard en Vivo")
-    
-    # Submenú usando pestañas (Tabs)
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "📅 Partidos", "📊 Clasificación", "🥇 Líderes", "🏆 Premios", "🛡️ Selecciones", "⚖️ Comparador"
-    ])
-    
-    with tab1:
-        st.header("Partidos y Resultados")
-        st.info("A la espera de resultados. Aquí se conectará la API en vivo.")
-        # Ejemplo de tarjeta de partido con CSS
-        st.markdown("""
-        <div class="match-card">
-            <div class="team-info"><img src="https://flagcdn.com/w40/es.png" width="30"> España</div>
-            <div class="score">0 - 0</div>
-            <div class="team-info">Brasil <img src="https://flagcdn.com/w40/br.png" width="30"></div>
+<div class="hero">
+    <div class="hero-ball">🏆</div>
+    <div class="hero-title">FIFA WORLD CUP</div>
+    <div class="hero-sub">The Greatest Show on Earth</div>
+    <div class="hero-dates">11 JUNIO — 19 JULIO 2026</div>
+    <div class="hero-hosts">🇺🇸 Estados Unidos &nbsp;·&nbsp; 🇨🇦 Canadá &nbsp;·&nbsp; 🇲🇽 México</div>
+    <div class="hero-stats">
+        <div class="hero-stat">
+            <div class="hero-stat-n">48</div>
+            <div class="hero-stat-l">Selecciones</div>
         </div>
-        """, unsafe_allow_html=True)
-        
-    with tab2:
-        st.header("Clasificación Fase de Grupos")
-        # DataFrame de ejemplo
-        df_grupo = pd.DataFrame({
-            "Pos": [1, 2, 3, 4],
-            "Selección": ["España", "Brasil", "Japón", "Marruecos"],
-            "Pts": [0, 0, 0, 0],
-            "GF": [0, 0, 0, 0],
-            "GC": [0, 0, 0, 0],
-            "Dif": [0, 0, 0, 0],
-            "TA": [0, 0, 0, 0],
-            "TR": [0, 0, 0, 0]
-        })
-        st.dataframe(df_grupo, hide_index=True, use_container_width=True)
+        <div class="hero-stat">
+            <div class="hero-stat-n">104</div>
+            <div class="hero-stat-l">Partidos</div>
+        </div>
+        <div class="hero-stat">
+            <div class="hero-stat-n">16</div>
+            <div class="hero-stat-l">Estadios</div>
+        </div>
+        <div class="hero-stat">
+            <div class="hero-stat-n">39</div>
+            <div class="hero-stat-l">Días</div>
+        </div>
+    </div>
+</div>""", unsafe_allow_html=True)
 
-    with tab3:
-        st.header("Líderes del Torneo")
-        col1, col2, col3 = st.columns(3)
-        col1.subheader("⚽ Goleadores")
-        col1.write("1. [Foto] Jugador X - 0 Goles")
-        col2.subheader("👟 Asistencias")
-        col2.write("1. [Foto] Jugador Y - 0 Asistencias")
-        col3.subheader("🧤 Portería a Cero")
-        col3.write("1. [Foto] Portero Z - 0 Partidos")
+# ─────────────────────────────────────────────────────────
+# STATS RÁPIDAS
+# ─────────────────────────────────────────────────────────
+played = sum(1 for m in MATCHES if m["status"] == "FT")
+live_c = sum(1 for m in MATCHES if m["status"] == "LIVE")
+goals  = sum(
+    (m["home_score"] or 0) + (m["away_score"] or 0)
+    for m in MATCHES if m["home_score"] is not None
+)
+ns = sum(1 for m in MATCHES if m["status"] == "NS")
 
-    with tab4:
-        st.header("Premios (Post-Torneo)")
-        st.warning("Esta sección se actualizará al finalizar el torneo.")
-        st.markdown("- **Bota de Oro:** Por definir\n- **MVP:** Por definir\n- **Mejor Portero:** Por definir\n- **Mejor Joven:** Por definir")
+c1, c2, c3, c4 = st.columns(4)
+for col, icon, val, lbl in zip(
+    [c1, c2, c3, c4],
+    ["🏟️", "🔴", "⚽", "📅"],
+    [played, live_c, goals, ns],
+    ["PARTIDOS JUGADOS", "EN VIVO", "GOLES MARCADOS", "PRÓXIMOS"],
+):
+    col.markdown(f"""
+    <div class="stat-card">
+        <div class="stat-icon">{icon}</div>
+        <div class="stat-n">{val}</div>
+        <div class="stat-l">{lbl}</div>
+    </div>""", unsafe_allow_html=True)
 
-    with tab5:
-        st.header("Selecciones Convocadas")
-        seleccion = st.selectbox("Elige una selección:", ["España", "Brasil", "Argentina", "Francia"])
-        
-        subtab1, subtab2 = st.tabs(["👥 Jugadores", "📈 Estadísticas Avanzadas (Selección)"])
-        with subtab1:
-            st.write(f"### Convocatoria de {seleccion}")
-            st.markdown("""
-            <div style='display: flex; align-items: center; gap: 15px;'>
-                <img src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png' class='player-avatar'>
-                <div>
-                    <b>Lamine Yamal</b><br>
-                    <small>Delantero | Estadísticas Avanzadas del Mundial: 0 xG, 0 xA</small>
+st.markdown('<div class="gold-div"></div>', unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────────────────
+# ÚLTIMOS RESULTADOS + PRÓXIMOS PARTIDOS
+# ─────────────────────────────────────────────────────────
+col_left, col_right = st.columns(2)
+
+with col_left:
+    st.markdown("""
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;
+                letter-spacing:3px;color:var(--gold);margin-bottom:0.8rem">
+        ÚLTIMOS RESULTADOS
+    </div>""", unsafe_allow_html=True)
+
+    recent = [m for m in MATCHES if m["status"] in ("FT", "LIVE")][-6:]
+    for m in reversed(recent):
+        hf = FLAG_MAP.get(m["home"], "🏳️")
+        af = FLAG_MAP.get(m["away"], "🏳️")
+        hn = NAME_MAP.get(m["home"], m["home"])
+        an = NAME_MAP.get(m["away"], m["away"])
+        if m["status"] == "LIVE":
+            badge = '<span class="badge badge-live"><span class="live-dot"></span> LIVE</span>'
+            score_cls = "live"
+        else:
+            badge = '<span class="badge badge-ft">FT</span>'
+            score_cls = ""
+
+        st.markdown(f"""
+        <div class="match-card" style="padding:0.9rem 1.2rem">
+            <div class="match-row">
+                <div class="match-team">
+                    <span class="team-flag">{hf}</span>
+                    <span class="team-name" style="font-size:0.95rem">{hn}</span>
+                </div>
+                <div class="match-score-box" style="min-width:80px;padding:0.3rem 0.8rem">
+                    <div class="match-score {score_cls}" style="font-size:1.6rem">
+                        {m['home_score']} – {m['away_score']}
+                    </div>
+                </div>
+                <div class="match-team away">
+                    <span class="team-flag">{af}</span>
+                    <span class="team-name" style="font-size:0.95rem">{an}</span>
                 </div>
             </div>
-            """, unsafe_allow_html=True)
-        with subtab2:
-            st.write(f"### Estilo de Juego: {seleccion} en el Mundial")
-            st.info("Aquí insertaremos los gráficos de Posesión, Entradas al área y Radares colectivos.")
+            <div class="match-meta">
+                <span style="font-size:0.68rem">Grupo {m['group']}</span>
+                {badge}
+                <span style="font-size:0.68rem">{m['date'].strftime('%d %b')}</span>
+            </div>
+        </div>""", unsafe_allow_html=True)
 
-    with tab6:
-        st.header("Comparador de Jugadores")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.selectbox("Jugador 1", ["Jugador A"])
-        with col2:
-            st.selectbox("Jugador 2", ["Jugador B"])
-        st.info("Aquí irá el Radar Chart superpuesto comparando a ambos.")
+with col_right:
+    st.markdown("""
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;
+                letter-spacing:3px;color:var(--gold);margin-bottom:0.8rem">
+        PRÓXIMOS PARTIDOS
+    </div>""", unsafe_allow_html=True)
 
-# ==========================================
-# SECCIÓN 2: ESTADÍSTICAS HISTÓRICAS
-# ==========================================
-elif menu_principal == "2. Estadísticas Históricas":
-    st.title("📚 Archivo Histórico")
-    
-    tab1, tab2 = st.tabs(["📖 Historia Mundialista", "🛡️ Análisis Histórico de Selecciones"])
-    
-    with tab1:
-        st.header("Palmarés y Récords")
-        st.write("- **Clasificación de Mundiales Ganados** (Brasil 5, Alemania 4...)")
-        st.write("- **Máximos Goleadores Históricos** (Klose 16, Ronaldo 15...)")
-        
-    with tab2:
-        st.header("Análisis de Selecciones (Pre-Mundial)")
-        seleccion_hist = st.selectbox("Selecciona un país a analizar:", ["España", "Argentina", "Inglaterra"])
-        
-        st.subheader("Cómo Juega (Últimos 10 Partidos Oficiales)")
-        st.info(f"Radar chart de {seleccion_hist} basado en sus últimos 10 partidos (Clasificatorias/Nations League).")
-        
-        st.subheader("Estado de Forma de los Jugadores")
-        st.info("Métricas avanzadas del último año natural en sus respectivos clubes para los jugadores convocados.")
+    upcoming = [m for m in MATCHES if m["status"] == "NS"][:6]
+    for m in upcoming:
+        hf = FLAG_MAP.get(m["home"], "🏳️")
+        af = FLAG_MAP.get(m["away"], "🏳️")
+        hn = NAME_MAP.get(m["home"], m["home"])
+        an = NAME_MAP.get(m["away"], m["away"])
+        st.markdown(f"""
+        <div class="match-card upcoming" style="padding:0.9rem 1.2rem">
+            <div class="match-row">
+                <div class="match-team">
+                    <span class="team-flag">{hf}</span>
+                    <span class="team-name" style="font-size:0.95rem">{hn}</span>
+                </div>
+                <div class="match-score-box" style="min-width:90px;padding:0.4rem 0.8rem;
+                     background:rgba(26,58,107,0.4)">
+                    <div class="match-score upcoming">
+                        {m['date'].strftime('%d %b')}<br>{m['date'].strftime('%H:%M')}
+                    </div>
+                </div>
+                <div class="match-team away">
+                    <span class="team-flag">{af}</span>
+                    <span class="team-name" style="font-size:0.95rem">{an}</span>
+                </div>
+            </div>
+            <div class="match-meta">
+                <span style="font-size:0.68rem">Grupo {m['group']}</span>
+                <span class="badge badge-ns">PRÓXIMO</span>
+                <span style="font-size:0.68rem">📍 {m['venue'].split(',')[0]}</span>
+            </div>
+        </div>""", unsafe_allow_html=True)
+
+st.markdown('<div class="gold-div"></div>', unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────────────────
+# TOP GOLEADORES + LÍDERES DE GRUPO
+# ─────────────────────────────────────────────────────────
+col_g1, col_g2 = st.columns([1, 2])
+
+with col_g1:
+    st.markdown("""
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;
+                letter-spacing:3px;color:var(--gold);margin-bottom:0.8rem">
+        ⚽ TOP GOLEADORES
+    </div>""", unsafe_allow_html=True)
+    for p in TOP_SCORERS[:5]:
+        rank_cls = "top1" if p["rank"] == 1 else ""
+        st.markdown(f"""
+        <div class="lb-card" style="padding:0.7rem 1rem">
+            <div class="lb-rank {rank_cls}" style="font-size:1.4rem;min-width:28px">
+                #{p['rank']}
+            </div>
+            <div class="lb-flag" style="font-size:1.6rem">{p['flag']}</div>
+            <div class="lb-info">
+                <div class="lb-name" style="font-size:0.9rem">{p['player']}</div>
+                <div class="lb-team">{NAME_MAP.get(p['team'], p['team'])}</div>
+            </div>
+            <div style="text-align:right">
+                <div class="lb-val" style="font-size:1.6rem">{p['goals']}</div>
+                <div class="lb-val-l">⚽</div>
+            </div>
+        </div>""", unsafe_allow_html=True)
+
+with col_g2:
+    st.markdown("""
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;
+                letter-spacing:3px;color:var(--gold);margin-bottom:0.8rem">
+        🏆 LÍDERES DE GRUPO
+    </div>""", unsafe_allow_html=True)
+    grp_list = list(GROUPS.keys())
+    leader_cols = st.columns(3)
+    for i, grp in enumerate(grp_list):
+        with leader_cols[i % 3]:
+            leader = get_group_standings(grp)[0]
+            st.markdown(f"""
+            <div style="background:var(--card);border:1px solid var(--border);
+                        border-radius:12px;padding:0.9rem;text-align:center;margin-bottom:0.5rem">
+                <div style="font-size:0.65rem;letter-spacing:3px;color:var(--gold);
+                            text-transform:uppercase;margin-bottom:0.3rem">GRUPO {grp}</div>
+                <div style="font-size:2rem">{leader['flag']}</div>
+                <div style="font-family:'Oswald',sans-serif;font-size:0.88rem;
+                            letter-spacing:1px;color:var(--white)">{leader['name']}</div>
+                <div style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;
+                            color:var(--gold2)">{leader['pts']} PTS</div>
+            </div>""", unsafe_allow_html=True)
+
+# FOOTER
+st.markdown("""
+<div class="footer">
+    ⚽ FIFA World Cup 2026 · USA · Canadá · México · 11 Jun – 19 Jul 2026<br>
+    <span style="font-size:0.65rem;opacity:0.5">
+        App de demostración · Datos ficticios · Desarrollado con Streamlit + Plotly
+    </span>
+</div>""", unsafe_allow_html=True)
